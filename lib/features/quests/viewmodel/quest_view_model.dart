@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../../data/repositories/quest_repository.dart';
 import '../../../data/repositories/user_quest_repository.dart';
+import '../../../data/services/location_service.dart';
 import '../model/quest_model.dart';
 import '../model/quest_state.dart';
 
@@ -13,12 +15,40 @@ class QuestViewModel extends ChangeNotifier {
   final QuestRepository _repository;
   final UserQuestRepository _userQuestRepository;
   final String _userId;
+  final LocationService _locationService = LocationService();
   QuestState _state = const QuestState();
   final List<StreamSubscription<dynamic>> _subscriptions = [];
   bool _disposed = false;
   String? _initializedQuestIds;
 
   QuestState get state => _state;
+
+  Future<Position> getCurrentLocation() {
+    return _locationService.getCurrentLocation();
+  }
+
+  Future<double> checkQuestDistance(QuestModel quest) {
+    final latitude = quest.cafeLatitude;
+    final longitude = quest.cafeLongitude;
+    final radius = quest.targetRadiusMeters;
+
+    if (latitude == null || longitude == null) {
+      throw StateError(
+        'Quest ${quest.id} does not have café coordinates.',
+      );
+    }
+
+    if (radius <= 0) {
+      throw StateError(
+        'Quest ${quest.id} has an invalid geofence radius.',
+      );
+    }
+
+    return _locationService.calculateDistance(
+      targetLatitude: latitude,
+      targetLongitude: longitude,
+    );
+  }
 
   void fetchQuests() {
     for (final subscription in _subscriptions) {

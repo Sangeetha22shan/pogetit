@@ -45,7 +45,16 @@ class _QuestHomePageState extends State<QuestHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('PoGetIt – Quest Dashboard')),
+      appBar: AppBar(
+        title: const Text('PoGetIt – Quest Dashboard'),
+        actions: [
+          IconButton(
+            tooltip: 'Test GPS location',
+            icon: const Icon(Icons.my_location),
+            onPressed: _testCurrentLocation,
+          ),
+        ],
+      ),
       body: SafeArea(
         child: ListenableBuilder(
           listenable: _viewModel,
@@ -156,9 +165,62 @@ class _QuestHomePageState extends State<QuestHomePage> {
           quest: quest,
           userQuest: userQuest,
           onStart: () => _startQuest(quest.id),
+          onCheckLocation: () => _checkQuestLocation(quest),
         );
       }).toList(),
     );
+  }
+
+  Future<void> _checkQuestLocation(QuestModel quest) async {
+    try {
+      final distance = await _viewModel.checkQuestDistance(quest);
+      if (!mounted) return;
+
+      final isInside = distance <= quest.targetRadiusMeters;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isInside
+                ? 'You are inside the quest area! '
+                    'Distance: ${distance.toStringAsFixed(1)} m'
+                : 'You are outside the quest area. '
+                    'Distance: ${distance.toStringAsFixed(1)} m',
+          ),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Location validation failed: $error')),
+      );
+    }
+  }
+
+  Future<void> _testCurrentLocation() async {
+    try {
+      final position = await _viewModel.getCurrentLocation();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Latitude: ${position.latitude.toStringAsFixed(6)}\n'
+            'Longitude: ${position.longitude.toStringAsFixed(6)}',
+          ),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Location error: $error')));
+    }
   }
 
   Future<void> _startQuest(String questId) async {
@@ -202,11 +264,13 @@ class _QuestCard extends StatelessWidget {
     required this.quest,
     required this.userQuest,
     required this.onStart,
+    required this.onCheckLocation,
   });
 
   final QuestModel quest;
   final UserQuestModel userQuest;
   final VoidCallback onStart;
+  final VoidCallback onCheckLocation;
 
   @override
   Widget build(BuildContext context) {
@@ -249,13 +313,23 @@ class _QuestCard extends StatelessWidget {
                 if (userQuest.isAvailable)
                   TextButton(
                     onPressed: onStart,
-                    child: const Text('Start quest'),
+                    child: const Text('Accept Quest'),
                   ),
                 if (userQuest.isOngoing)
-                  Text(
-                    '${userQuest.steps} steps • ${userQuest.distance.round()} m',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${userQuest.steps} steps • ${userQuest.distance.round()} m',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        TextButton.icon(
+                          onPressed: onCheckLocation,
+                          icon: const Icon(Icons.location_on),
+                          label: const Text('Check location'),
+                        ),
+                      ],
+                    ),
                 if (userQuest.isCompleted) const Chip(label: Text('Completed')),
               ],
             ),

@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class QuestModel {
   const QuestModel({
     required this.id,
@@ -30,9 +32,16 @@ class QuestModel {
     Map<String, dynamic> data,
   ) {
     final cafeLocation = data['cafeLocation'];
-    final location = cafeLocation is Map<String, dynamic>
-        ? cafeLocation
-        : const <String, dynamic>{};
+    double? latitude;
+    double? longitude;
+
+    if (cafeLocation is GeoPoint) {
+      latitude = cafeLocation.latitude;
+      longitude = cafeLocation.longitude;
+    } else if (cafeLocation is Map<String, dynamic>) {
+      latitude = (cafeLocation['latitude'] as num?)?.toDouble();
+      longitude = (cafeLocation['longitude'] as num?)?.toDouble();
+    }
 
     return QuestModel(
       id: documentId,
@@ -43,8 +52,8 @@ class QuestModel {
           (data['targetDistanceMeters'] as num?)?.toDouble() ?? 0,
       targetSteps: (data['targetSteps'] as num?)?.toInt() ?? 0,
       targetRadiusMeters: (data['targetRadiusMeters'] as num?)?.toDouble() ?? 0,
-      cafeLatitude: (location['latitude'] as num?)?.toDouble(),
-      cafeLongitude: (location['longitude'] as num?)?.toDouble(),
+      cafeLatitude: latitude,
+      cafeLongitude: longitude,
       rewardXP: (data['rewardXP'] as num?)?.toInt() ?? 0,
       isActive: data['isActive'] as bool? ?? false,
     );

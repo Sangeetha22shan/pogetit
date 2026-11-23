@@ -19,6 +19,10 @@ class UserQuestModel {
   final DateTime? startedAt;
   final DateTime? completedAt;
 
+  bool get isAvailable => status == 'available';
+  bool get isOngoing => status == 'ongoing';
+  bool get isCompleted => status == 'completed';
+
   factory UserQuestModel.fromFirestore(
     String documentId,
     Map<String, dynamic> data,
@@ -31,6 +35,20 @@ class UserQuestModel {
       steps: (data['steps'] as num?)?.toInt() ?? 0,
       startedAt: (data['startedAt'] as Timestamp?)?.toDate(),
       completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
+    );
+  }
+}
+
+class UserProfileModel {
+  const UserProfileModel({this.totalXP = 0, this.completedQuests = 0});
+
+  final int totalXP;
+  final int completedQuests;
+
+  factory UserProfileModel.fromFirestore(Map<String, dynamic>? data) {
+    return UserProfileModel(
+      totalXP: (data?['totalXP'] as num?)?.toInt() ?? 0,
+      completedQuests: (data?['completedQuests'] as num?)?.toInt() ?? 0,
     );
   }
 }

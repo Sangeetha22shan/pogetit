@@ -8,13 +8,24 @@ class AuthRepository {
 
   final FirebaseAuth _firebaseAuth;
 
+  AuthUser? get currentUser {
+    final user = _firebaseAuth.currentUser;
+    return user == null ? null : AuthUser.fromFirebaseUser(user);
+  }
+
   Stream<AuthUser?> get authStateChanges => _firebaseAuth
       .authStateChanges()
       .map((user) => user == null ? null : AuthUser.fromFirebaseUser(user));
 
-  Future<void> signInAnonymously() async {
-    await _firebaseAuth.signInAnonymously();
-  }
+  Future<AuthUser> ensureSignedInAnonymously() async {
+    final existingUser = currentUser;
+    if (existingUser != null) return existingUser;
 
-  Future<void> signOut() => _firebaseAuth.signOut();
+    final credential = await _firebaseAuth.signInAnonymously();
+    final user = credential.user;
+    if (user == null) {
+      throw StateError('Anonymous sign-in completed without a Firebase user.');
+    }
+    return AuthUser.fromFirebaseUser(user);
+  }
 }

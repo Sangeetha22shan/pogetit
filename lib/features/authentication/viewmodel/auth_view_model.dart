@@ -18,22 +18,16 @@ class AuthViewModel extends ChangeNotifier {
   late final StreamSubscription _subscription;
   AuthState _state = const AuthState();
   bool _disposed = false;
+  bool _initializationStarted = false;
 
   AuthState get state => _state;
 
-  Future<void> signInAnonymously() async {
+  Future<void> initialize() async {
+    if (_initializationStarted) return;
+    _initializationStarted = true;
     try {
-      await _repository.signInAnonymously();
-    } catch (error) {
-      _setState(
-        AuthState(status: AuthStatus.error, errorMessage: error.toString()),
-      );
-    }
-  }
-
-  Future<void> signOut() async {
-    try {
-      await _repository.signOut();
+      final user = await _repository.ensureSignedInAnonymously();
+      _handleAuthChange(user);
     } catch (error) {
       _setState(
         AuthState(status: AuthStatus.error, errorMessage: error.toString()),

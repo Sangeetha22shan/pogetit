@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/quest_repository.dart';
+import 'data/repositories/user_quest_repository.dart';
 import 'features/authentication/view/auth_gate.dart';
 import 'features/authentication/viewmodel/auth_view_model.dart';
 
@@ -26,21 +27,24 @@ class PoGetItApp extends StatelessWidget {
       create: (_) => AuthRepository(),
       child: RepositoryProvider(
         create: (_) => QuestRepository(),
-        child: ChangeNotifierProvider(
-          create: (context) =>
-              AuthViewModel(context.read<AuthRepository>())
-                ..signInAnonymously(),
-          child: MaterialApp(
-            debugShowCheckedModeBanner: false,
-            title: 'PoGetIt',
-            theme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-              useMaterial3: true,
-            ),
-            home: Builder(
-              builder: (context) => AuthGate(
-                viewModel: context.read<AuthViewModel>(),
-                questRepository: context.read<QuestRepository>(),
+        child: RepositoryProvider(
+          create: (_) => UserQuestRepository(),
+          child: ChangeNotifierProvider(
+            create: (context) =>
+                AuthViewModel(context.read<AuthRepository>())..initialize(),
+            child: MaterialApp(
+              debugShowCheckedModeBanner: false,
+              title: 'PoGetIt',
+              theme: ThemeData(
+                colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+                useMaterial3: true,
+              ),
+              home: Builder(
+                builder: (context) => AuthGate(
+                  viewModel: context.read<AuthViewModel>(),
+                  questRepository: context.read<QuestRepository>(),
+                  userQuestRepository: context.read<UserQuestRepository>(),
+                ),
               ),
             ),
           ),

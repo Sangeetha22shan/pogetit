@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function ownsUser(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    match /quests/{questId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if false;
+    }
+
+    match /users/{userId}/profile/{profileId} {
+      allow read: if ownsUser(userId);
+      allow create: if ownsUser(userId)
+        && request.resource.data.keys().hasOnly([
+          'totalXP',
+          'completedQuests'
+        ])
+        && request.resource.data.totalXP == 0
+        && request.resource.data.completedQuests == 0;
+      allow update, delete: if false;
+    }
+
+    match /users/{userId}/quests/{questId} {
+      allow read: if ownsUser(userId);
+
+      allow create: if ownsUser(userId)
+        && request.resource.data.keys().hasOnly([
+          'status',
+          'progress',
+          'distance',
+          'steps'
+        ])
+        && request.resource.data.status == 'available'
+        && request.resource.data.progress == 0
+        && request.resource.data.distance == 0
+        && request.resource.data.steps == 0;
+
+      allow update: if ownsUser(userId) && (
+        (
+          resource.data.status == 'available'
+          && request.resource.data.status == 'ongoing'
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'startedAt'])
+          && request.resource.data.startedAt == request.time
+        )
+        || (
+          resource.data.status == 'ongoing'
+          && request.resource.data.status == 'ongoing'
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['progress', 'distance', 'steps'])
+          && request.resource.data.progress is number
+          && request.resource.data.progress >= 0
+          && request.resource.data.progress <= 1
+          && request.resource.data.distance is number
+          && request.resource.data.distance >= 0
+          && request.resource.data.steps is int
+          && request.resource.data.steps >= 0
+        )
+      );
+
+      allow delete: if false;
+    }
+
+    match /users/{userId}/validationRecords/{recordId} {
+      allow read: if ownsUser(userId);
+      allow write: if false;
+    }
+  }
+}

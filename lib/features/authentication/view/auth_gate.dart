@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../data/repositories/quest_repository.dart';
+import '../../../data/repositories/user_quest_repository.dart';
 import '../../quests/view/quest_home_page.dart';
 import '../model/auth_state.dart';
 import '../viewmodel/auth_view_model.dart';
@@ -10,10 +11,12 @@ class AuthGate extends StatelessWidget {
     super.key,
     required this.viewModel,
     required this.questRepository,
+    required this.userQuestRepository,
   });
 
   final AuthViewModel viewModel;
   final QuestRepository questRepository;
+  final UserQuestRepository userQuestRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -26,11 +29,17 @@ class AuthGate extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           ),
           AuthStatus.authenticated => QuestHomePage(
+            userId: state.user!.id,
             repository: questRepository,
-            onSignOut: viewModel.signOut,
+            userQuestRepository: userQuestRepository,
           ),
           AuthStatus.unauthenticated => const Scaffold(
-            body: Center(child: Text('You are signed out.')),
+            body: Center(
+              child: Text(
+                'No anonymous session is active. Restart the app to create a new session.',
+                textAlign: TextAlign.center,
+              ),
+            ),
           ),
           AuthStatus.error => Scaffold(
             body: Center(

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../features/quests/model/quest_model.dart';
 
@@ -14,6 +15,12 @@ class QuestRepository {
         .where('isActive', isEqualTo: true)
         .snapshots()
         .map((snapshot) {
+          debugPrint('Firestore quest documents: ${snapshot.docs.length}');
+          for (final doc in snapshot.docs) {
+            debugPrint('Quest ID: ${doc.id}');
+            debugPrint('Quest data: ${doc.data()}');
+          }
+
           final quests = snapshot.docs
               .map((doc) => QuestModel.fromFirestore(doc.id, doc.data()))
               .toList();

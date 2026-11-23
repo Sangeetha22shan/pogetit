@@ -34,6 +34,7 @@ class QuestViewModel extends ChangeNotifier {
         if (!_disposed) notifyListeners();
       },
       onError: (Object error) {
+        debugPrint('Firestore quest stream error: $error');
         _state = _state.copyWith(
           status: QuestLoadingStatus.error,
           errorMessage: error.toString(),

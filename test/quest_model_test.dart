@@ -69,4 +69,21 @@ void main() {
     expect(cafeQuest.validationType, 'cafe_visit');
     expect(walkQuest.validationType, 'cafe_walk');
   });
+
+  test('infers café quest validation from its geofence configuration', () {
+    final cafeQuest = QuestModel.fromFirestore('CAFE-01', {
+      'type': 'coffee_stop',
+      'targetRadiusMeters': 50,
+      'cafeLocation': {'latitude': 11.0168, 'longitude': 76.9558},
+    });
+    final walkQuest = QuestModel.fromFirestore('CAFE-02', {
+      'type': 'coffee_stop',
+      'targetDistanceMeters': 500,
+      'targetRadiusMeters': 50,
+      'cafeLocation': {'latitude': 11.0168, 'longitude': 76.9558},
+    });
+
+    expect(cafeQuest.validationType, 'cafe_visit');
+    expect(walkQuest.validationType, 'cafe_walk');
+  });
 }

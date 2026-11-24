@@ -183,10 +183,9 @@ function haversineDistanceMeters(
  * @return {!Object} Validated quest requirements.
  */
 function getValidationRequirements(quest) {
-  if (typeof quest.type !== "string") {
-    throw new HttpsError("failed-precondition", "Quest type is missing.");
-  }
-  const type = quest.type.trim().toLowerCase().replace(/-/g, "_");
+  const type = typeof quest.type === "string" ?
+    quest.type.trim().toLowerCase().replace(/-/g, "_") :
+    "";
 
   if (CAFE_VISIT_TYPES.has(type) || CAFE_WALK_TYPES.has(type)) {
     const validationType = CAFE_WALK_TYPES.has(type) ?
@@ -232,6 +231,22 @@ function getValidationRequirements(quest) {
     };
   }
 
+  const hasCafeLocation = getCafeCoordinates(quest.cafeLocation) !== null;
+  const hasCafeRadius =
+    typeof quest.targetRadiusMeters === "number" &&
+    Number.isFinite(quest.targetRadiusMeters) &&
+    quest.targetRadiusMeters > 0;
+  if (hasCafeLocation && hasCafeRadius) {
+    const isCafeWalk =
+      typeof quest.targetDistanceMeters === "number" &&
+      Number.isFinite(quest.targetDistanceMeters) &&
+      quest.targetDistanceMeters > 0;
+    return getValidationRequirements({
+      ...quest,
+      type: isCafeWalk ? "cafe_walk" : "cafe_visit",
+    });
+  }
+
   if (RUN_TYPES.has(type)) {
     return {
       type,
@@ -248,7 +263,7 @@ function getValidationRequirements(quest) {
 
   throw new HttpsError(
       "failed-precondition",
-      `Quest type "${quest.type}" is not supported for validation.`,
+      `Quest type "${quest.type || "missing"}" is not supported.`,
   );
 }
 

@@ -35,13 +35,14 @@ class QuestModel {
   final bool isActive;
 
   String get validationType {
-    switch (type.trim().toLowerCase().replaceAll('-', '_')) {
+    final normalizedType = type.trim().toLowerCase().replaceAll('-', '_');
+    switch (normalizedType) {
       case 'cafe':
       case 'café':
       case 'cafe_location':
       case 'cafe_stop':
       case 'cafe_visit':
-        return 'cafe_visit';
+        return _hasWalkingDistanceRequirement ? 'cafe_walk' : 'cafe_visit';
       case 'cafe_walk':
       case 'cafe_walking':
       case 'walk_to_cafe':
@@ -50,9 +51,21 @@ class QuestModel {
       case 'running':
         return 'running';
       default:
+        if (_hasCafeGeofence) {
+          return _hasWalkingDistanceRequirement ? 'cafe_walk' : 'cafe_visit';
+        }
         return type.trim().toLowerCase();
     }
   }
+
+  bool get _hasCafeGeofence =>
+      cafeLatitude != null &&
+      cafeLongitude != null &&
+      targetRadiusMeters.isFinite &&
+      targetRadiusMeters > 0;
+
+  bool get _hasWalkingDistanceRequirement =>
+      targetDistanceMeters.isFinite && targetDistanceMeters > 0;
 
   double progressFor({required double distance, required int steps}) {
     final distanceProgress = (distance / targetDistanceMeters).clamp(0.0, 1.0);

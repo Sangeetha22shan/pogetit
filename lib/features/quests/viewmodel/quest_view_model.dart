@@ -193,8 +193,16 @@ class QuestViewModel extends ChangeNotifier {
     final userQuest = _state.userQuests
         .where((item) => item.questId == quest.id)
         .firstOrNull;
-    if (userQuest == null || !userQuest.isOngoing) {
-      throw StateError('Only ongoing quests can be validated.');
+    if (userQuest == null) {
+      throw StateError(
+        'Quest ${quest.id} has no progress record for this signed-in user.',
+      );
+    }
+    if (!userQuest.isOngoing) {
+      throw StateError(
+        'Quest ${quest.id} has status "${userQuest.status}"; '
+        'validation requires status "ongoing".',
+      );
     }
 
     _validatingQuestIds.add(quest.id);

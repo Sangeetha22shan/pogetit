@@ -138,6 +138,28 @@ test(
     },
 );
 
+test(
+    "café geofence fields identify a visit despite an unknown type",
+    async () => {
+      const {localId, idToken} = await createAnonymousUser();
+      await seedQuest(localId, "CAFE-UNKNOWN-TYPE", {
+        type: "coffee_stop",
+        cafeLocation: new GeoPoint(0, 0),
+        targetRadiusMeters: 50,
+        rewardXP: 80,
+        isActive: true,
+      },
+      );
+
+      const result = await callValidateQuest(idToken, {
+        questId: "CAFE-UNKNOWN-TYPE",
+        evidence: {latitude: 0, longitude: 0},
+      });
+
+      assert.equal(result.body.result.success, true);
+      assert.equal(result.body.result.rewardXP, 80);
+    });
+
 test("insufficient running distance is rejected and recorded", async () => {
   const {localId, idToken} = await createAnonymousUser();
   await createRunningQuest(localId, "RUN-DISTANCE");

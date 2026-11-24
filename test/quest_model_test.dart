@@ -37,16 +37,19 @@ void main() {
     expect(quest.targetSteps, 30);
   });
 
-  test('does not invent running requirements when Firestore fields are missing', () {
-    final quest = QuestModel.fromFirestore('RUN-01', {
-      'title': 'Beginner Jog',
-      'isActive': true,
-    });
+  test(
+    'does not invent running requirements when Firestore fields are missing',
+    () {
+      final quest = QuestModel.fromFirestore('RUN-01', {
+        'title': 'Beginner Jog',
+        'isActive': true,
+      });
 
-    expect(quest.targetDistanceMeters, 0);
-    expect(quest.targetSteps, 0);
-    expect(quest.rewardXP, 0);
-  });
+      expect(quest.targetDistanceMeters, 0);
+      expect(quest.targetSteps, 0);
+      expect(quest.rewardXP, 0);
+    },
+  );
 
   test('running quest progress requires distance and steps', () {
     final quest = QuestModel.fromFirestore('RUN-01', {

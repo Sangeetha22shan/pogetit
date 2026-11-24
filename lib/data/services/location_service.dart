@@ -5,9 +5,7 @@ class LocationService {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
 
     if (!serviceEnabled) {
-      throw Exception(
-        'Location services are disabled. Please enable GPS.',
-      );
+      throw Exception('Location services are disabled. Please enable GPS.');
     }
 
     var permission = await Geolocator.checkPermission();

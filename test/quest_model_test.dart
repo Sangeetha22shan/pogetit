@@ -23,17 +23,50 @@ void main() {
     expect(quest.isActive, isTrue);
   });
 
-  test('uses safe defaults for missing optional Firestore fields', () {
+  test(
+    'uses known running quest targets when Firestore fields are missing',
+    () {
+      final quest = QuestModel.fromFirestore('RUN-01', {
+        'title': 'Beginner Jog',
+        'rewardXP': 100,
+        'isActive': true,
+      });
+
+      expect(quest.description, isEmpty);
+      expect(quest.targetDistanceMeters, 1000);
+      expect(quest.targetSteps, 1200);
+      expect(quest.rewardXP, 100);
+      expect(quest.cafeLatitude, isNull);
+      expect(quest.cafeLongitude, isNull);
+
+      final secondQuest = QuestModel.fromFirestore('RUN-02', {});
+      expect(secondQuest.targetDistanceMeters, 2000);
+      expect(secondQuest.targetSteps, 2500);
+      expect(secondQuest.rewardXP, 150);
+    },
+  );
+
+  test('running quest progress requires distance and steps', () {
     final quest = QuestModel.fromFirestore('RUN-01', {
-      'title': 'Beginner Jog',
+      'targetDistanceMeters': 1000,
+      'targetSteps': 1200,
       'rewardXP': 100,
       'isActive': true,
     });
 
-    expect(quest.description, isEmpty);
-    expect(quest.targetDistanceMeters, 0);
-    expect(quest.targetSteps, 0);
-    expect(quest.cafeLatitude, isNull);
-    expect(quest.cafeLongitude, isNull);
+    expect(quest.progressFor(distance: 1000, steps: 600), 0.5);
+    expect(quest.hasMetRequirements(distance: 1000, steps: 1199), isFalse);
+    expect(quest.hasMetRequirements(distance: 999, steps: 1200), isFalse);
+    expect(quest.hasMetRequirements(distance: 1000, steps: 1200), isTrue);
+  });
+
+  test('normalizes café quest type aliases for validation', () {
+    final cafeQuest = QuestModel.fromFirestore('CAFE-01', {'type': 'cafe'});
+    final walkQuest = QuestModel.fromFirestore('CAFE-02', {
+      'type': 'cafe-walking',
+    });
+
+    expect(cafeQuest.validationType, 'cafe_visit');
+    expect(walkQuest.validationType, 'cafe_walk');
   });
 }

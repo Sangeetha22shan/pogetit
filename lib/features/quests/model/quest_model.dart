@@ -1,6 +1,13 @@
+import 'dart:math' as math;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class QuestModel {
+  static const Map<String, (double, int, int)> _runningQuestDefaults = {
+    'RUN-01': (1000, 1200, 100),
+    'RUN-02': (2000, 2500, 150),
+  };
+
   const QuestModel({
     required this.id,
     required this.title,
@@ -27,10 +34,45 @@ class QuestModel {
   final int rewardXP;
   final bool isActive;
 
+  String get validationType {
+    switch (type.trim().toLowerCase().replaceAll('-', '_')) {
+      case 'cafe':
+      case 'café':
+      case 'cafe_location':
+      case 'cafe_stop':
+      case 'cafe_visit':
+        return 'cafe_visit';
+      case 'cafe_walk':
+      case 'cafe_walking':
+      case 'walk_to_cafe':
+        return 'cafe_walk';
+      case 'run':
+      case 'running':
+        return 'running';
+      default:
+        return type.trim().toLowerCase();
+    }
+  }
+
+  double progressFor({required double distance, required int steps}) {
+    final distanceProgress = (distance / targetDistanceMeters).clamp(0.0, 1.0);
+    if (targetSteps <= 0) return distanceProgress;
+
+    final stepProgress = (steps / targetSteps).clamp(0.0, 1.0);
+    return math.min(distanceProgress, stepProgress);
+  }
+
+  bool hasMetRequirements({required double distance, required int steps}) {
+    return targetSteps > 0 &&
+        distance >= targetDistanceMeters &&
+        steps >= targetSteps;
+  }
+
   factory QuestModel.fromFirestore(
     String documentId,
     Map<String, dynamic> data,
   ) {
+    final runningDefaults = _runningQuestDefaults[documentId] ?? (0.0, 0, 0);
     final cafeLocation = data['cafeLocation'];
     double? latitude;
     double? longitude;
@@ -49,12 +91,13 @@ class QuestModel {
       description: data['description'] as String? ?? '',
       type: data['type'] as String? ?? '',
       targetDistanceMeters:
-          (data['targetDistanceMeters'] as num?)?.toDouble() ?? 0,
-      targetSteps: (data['targetSteps'] as num?)?.toInt() ?? 0,
+          (data['targetDistanceMeters'] as num?)?.toDouble() ??
+          runningDefaults.$1,
+      targetSteps: (data['targetSteps'] as num?)?.toInt() ?? runningDefaults.$2,
       targetRadiusMeters: (data['targetRadiusMeters'] as num?)?.toDouble() ?? 0,
       cafeLatitude: latitude,
       cafeLongitude: longitude,
-      rewardXP: (data['rewardXP'] as num?)?.toInt() ?? 0,
+      rewardXP: (data['rewardXP'] as num?)?.toInt() ?? runningDefaults.$3,
       isActive: data['isActive'] as bool? ?? false,
     );
   }

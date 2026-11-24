@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../data/repositories/quest_repository.dart';
 import '../../../data/repositories/user_quest_repository.dart';
+import '../../../data/services/health_service.dart';
+import '../../../data/services/location_service.dart';
 import '../model/quest_model.dart';
 import '../model/quest_state.dart';
 import '../model/user_quest_model.dart';
@@ -13,11 +15,15 @@ class QuestHomePage extends StatefulWidget {
     required this.userId,
     required this.repository,
     required this.userQuestRepository,
+    this.locationService,
+    this.healthService,
   });
 
   final String userId;
   final QuestRepository repository;
   final UserQuestRepository userQuestRepository;
+  final LocationService? locationService;
+  final HealthService? healthService;
 
   @override
   State<QuestHomePage> createState() => _QuestHomePageState();
@@ -33,6 +39,8 @@ class _QuestHomePageState extends State<QuestHomePage> {
       widget.repository,
       widget.userQuestRepository,
       widget.userId,
+      locationService: widget.locationService,
+      healthService: widget.healthService,
     )..fetchQuests();
   }
 
@@ -114,8 +122,8 @@ class _QuestHomePageState extends State<QuestHomePage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _SummaryCard(
-                    label: 'Active quests',
-                    value: '$ongoingCount',
+                    label: 'Completed quests',
+                    value: '$completedCount',
                   ),
                 ),
               ],
@@ -166,9 +174,25 @@ class _QuestHomePageState extends State<QuestHomePage> {
           userQuest: userQuest,
           onStart: () => _startQuest(quest.id),
           onCheckLocation: () => _checkQuestLocation(quest),
+          isTracking: _viewModel.isTrackingQuest(quest.id),
+          onStartTracking: () => _startTracking(quest),
+          onStopTracking: _viewModel.stopTracking,
+          isValidating: _viewModel.isValidatingQuest(quest.id),
+          onValidate: () => _validateQuest(quest),
         );
       }).toList(),
     );
+  }
+
+  Future<void> _startTracking(QuestModel quest) async {
+    try {
+      await _viewModel.startTracking(quest);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not start tracking: $error')),
+      );
+    }
   }
 
   Future<void> _checkQuestLocation(QuestModel quest) async {
@@ -183,9 +207,9 @@ class _QuestHomePageState extends State<QuestHomePage> {
           content: Text(
             isInside
                 ? 'You are inside the quest area! '
-                    'Distance: ${distance.toStringAsFixed(1)} m'
+                      'Distance: ${distance.toStringAsFixed(1)} m'
                 : 'You are outside the quest area. '
-                    'Distance: ${distance.toStringAsFixed(1)} m',
+                      'Distance: ${distance.toStringAsFixed(1)} m',
           ),
           duration: const Duration(seconds: 5),
         ),
@@ -195,6 +219,28 @@ class _QuestHomePageState extends State<QuestHomePage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Location validation failed: $error')),
+      );
+    }
+  }
+
+  Future<void> _validateQuest(QuestModel quest) async {
+    try {
+      final result = await _viewModel.validateQuest(quest);
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.success
+                ? '+${result.rewardXP} XP earned!'
+                : result.failureMessage,
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not validate quest: $error')),
       );
     }
   }
@@ -265,12 +311,22 @@ class _QuestCard extends StatelessWidget {
     required this.userQuest,
     required this.onStart,
     required this.onCheckLocation,
+    required this.isTracking,
+    required this.onStartTracking,
+    required this.onStopTracking,
+    required this.isValidating,
+    required this.onValidate,
   });
 
   final QuestModel quest;
   final UserQuestModel userQuest;
   final VoidCallback onStart;
   final VoidCallback onCheckLocation;
+  final bool isTracking;
+  final VoidCallback onStartTracking;
+  final VoidCallback onStopTracking;
+  final bool isValidating;
+  final VoidCallback onValidate;
 
   @override
   Widget build(BuildContext context) {
@@ -307,7 +363,8 @@ class _QuestCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${(userQuest.progress.clamp(0, 1) * 100).round()}% completed',
+                  '${(userQuest.progress.clamp(0, 1) * 100).round()}% '
+                  '${userQuest.isCompleted ? 'completed' : 'progress'}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 if (userQuest.isAvailable)
@@ -316,20 +373,60 @@ class _QuestCard extends StatelessWidget {
                     child: const Text('Accept Quest'),
                   ),
                 if (userQuest.isOngoing)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '${userQuest.steps} steps • ${userQuest.distance.round()} m',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '${userQuest.steps} steps • ${userQuest.distance.round()} m',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      if (quest.cafeLatitude != null &&
+                          quest.cafeLongitude != null &&
+                          quest.targetRadiusMeters > 0)
                         TextButton.icon(
                           onPressed: onCheckLocation,
                           icon: const Icon(Icons.location_on),
                           label: const Text('Check location'),
                         ),
-                      ],
-                    ),
+                      if (quest.targetDistanceMeters > 0)
+                        if (isTracking)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                'Tracking active',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              TextButton.icon(
+                                onPressed: onStopTracking,
+                                icon: const Icon(Icons.stop),
+                                label: const Text('Stop Tracking'),
+                              ),
+                            ],
+                          )
+                        else
+                          TextButton.icon(
+                            onPressed: onStartTracking,
+                            icon: const Icon(Icons.play_arrow),
+                            label: const Text('Start Tracking'),
+                          ),
+                      TextButton.icon(
+                        onPressed: isValidating ? null : onValidate,
+                        icon: isValidating
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.verified),
+                        label: Text(
+                          isValidating ? 'Validating...' : 'Validate Quest',
+                        ),
+                      ),
+                    ],
+                  ),
                 if (userQuest.isCompleted) const Chip(label: Text('Completed')),
               ],
             ),

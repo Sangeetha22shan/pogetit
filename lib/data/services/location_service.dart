@@ -54,4 +54,13 @@ class LocationService {
       targetLongitude,
     );
   }
+
+  Stream<Position> trackLocation() {
+    return Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5,
+      ),
+    );
+  }
 }

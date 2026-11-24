@@ -23,28 +23,30 @@ void main() {
     expect(quest.isActive, isTrue);
   });
 
-  test(
-    'uses known running quest targets when Firestore fields are missing',
-    () {
-      final quest = QuestModel.fromFirestore('RUN-01', {
-        'title': 'Beginner Jog',
-        'rewardXP': 100,
-        'isActive': true,
-      });
+  test('uses the running targets configured in Firestore', () {
+    final quest = QuestModel.fromFirestore('RUN-01', {
+      'description': 'Walk 20 metres and complete 30 steps.',
+      'targetDistanceMeters': 20,
+      'targetSteps': 30,
+      'rewardXP': 100,
+      'isActive': true,
+    });
 
-      expect(quest.description, isEmpty);
-      expect(quest.targetDistanceMeters, 1000);
-      expect(quest.targetSteps, 1200);
-      expect(quest.rewardXP, 100);
-      expect(quest.cafeLatitude, isNull);
-      expect(quest.cafeLongitude, isNull);
+    expect(quest.description, 'Walk 20 metres and complete 30 steps.');
+    expect(quest.targetDistanceMeters, 20);
+    expect(quest.targetSteps, 30);
+  });
 
-      final secondQuest = QuestModel.fromFirestore('RUN-02', {});
-      expect(secondQuest.targetDistanceMeters, 2000);
-      expect(secondQuest.targetSteps, 2500);
-      expect(secondQuest.rewardXP, 150);
-    },
-  );
+  test('does not invent running requirements when Firestore fields are missing', () {
+    final quest = QuestModel.fromFirestore('RUN-01', {
+      'title': 'Beginner Jog',
+      'isActive': true,
+    });
+
+    expect(quest.targetDistanceMeters, 0);
+    expect(quest.targetSteps, 0);
+    expect(quest.rewardXP, 0);
+  });
 
   test('running quest progress requires distance and steps', () {
     final quest = QuestModel.fromFirestore('RUN-01', {

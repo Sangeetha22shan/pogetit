@@ -3,11 +3,6 @@ import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class QuestModel {
-  static const Map<String, (double, int, int)> _runningQuestDefaults = {
-    'RUN-01': (1000, 1200, 100),
-    'RUN-02': (2000, 2500, 150),
-  };
-
   const QuestModel({
     required this.id,
     required this.title,
@@ -85,7 +80,6 @@ class QuestModel {
     String documentId,
     Map<String, dynamic> data,
   ) {
-    final runningDefaults = _runningQuestDefaults[documentId] ?? (0.0, 0, 0);
     final cafeLocation = data['cafeLocation'];
     double? latitude;
     double? longitude;
@@ -104,13 +98,12 @@ class QuestModel {
       description: data['description'] as String? ?? '',
       type: data['type'] as String? ?? '',
       targetDistanceMeters:
-          (data['targetDistanceMeters'] as num?)?.toDouble() ??
-          runningDefaults.$1,
-      targetSteps: (data['targetSteps'] as num?)?.toInt() ?? runningDefaults.$2,
+          (data['targetDistanceMeters'] as num?)?.toDouble() ?? 0,
+      targetSteps: (data['targetSteps'] as num?)?.toInt() ?? 0,
       targetRadiusMeters: (data['targetRadiusMeters'] as num?)?.toDouble() ?? 0,
       cafeLatitude: latitude,
       cafeLongitude: longitude,
-      rewardXP: (data['rewardXP'] as num?)?.toInt() ?? runningDefaults.$3,
+      rewardXP: (data['rewardXP'] as num?)?.toInt() ?? 0,
       isActive: data['isActive'] as bool? ?? false,
     );
   }
